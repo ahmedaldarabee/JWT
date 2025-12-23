@@ -1,13 +1,13 @@
 ﻿namespace JWTLearning.Helpers {
 
     public class JWT {
-        protected string Key { get; set; }
-        
-        protected string Issuer { get; set; }
-        
-        protected string Audience { get; set; }
+        public string Key { get; set; }
 
-        protected string DurationInDays { get; set; }
+        public string Issuer { get; set; }
+
+        public string Audience { get; set; }
+
+        public double DurationInDays { get; set; }
 
     }
 }
