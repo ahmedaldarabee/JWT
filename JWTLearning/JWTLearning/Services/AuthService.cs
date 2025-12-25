@@ -9,8 +9,9 @@ using System.Text;
 
 namespace JWTLearning.Services {
 
-    public class AuthService : IAuthService
-    {
+    public class AuthService : IAuthService {
+        //readonly: same const idea but flexibility in define a value to it, where we can add value through initially like _userManager = userManager [ as a idea!! ] or in constructor
+
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly JWT _jwt;
@@ -18,7 +19,11 @@ namespace JWTLearning.Services {
         #region "Registration"
 
         // IOptions<JWT> jwt: to set jwt values from appsetting into JWT values
-        public AuthService(UserManager<ApplicationUser> userManager, IOptions<JWT> jwt, RoleManager<IdentityRole> roleManager) {
+        public AuthService(
+            UserManager<ApplicationUser> userManager,
+            IOptions<JWT> jwt,
+            RoleManager<IdentityRole> roleManager) {
+
             _userManager = userManager;
             _roleManager = roleManager;
             this._jwt = jwt.Value; // .value that be main jwt object as one block!
@@ -27,14 +32,11 @@ namespace JWTLearning.Services {
         //RegisterModel model: be as a data that send by user
         public async Task<AuthModel> RegisterAsync(RegisterModel model ) {
 
-            if ( await _userManager.FindByEmailAsync(model.Email) != null){
-                return new AuthModel { Message = "this email is already exist!" };
-            }
-
-            if (await _userManager.FindByNameAsync(model.UserName) != null){
-                return new AuthModel { Message = "this user name is already exist!" };
-            }
-
+            if (
+                await _userManager.FindByEmailAsync(model.Email) != null || 
+                await _userManager.FindByNameAsync(model.UserName) != null)
+                return new AuthModel { Message = "this user name or email is already exist!" };
+            
             // create new user
             var user = new ApplicationUser {
                 UserName = model.UserName,
@@ -143,7 +145,7 @@ namespace JWTLearning.Services {
         public async Task<string> AddRoleAsync(AddRoleModel model) {
 
             // get user data from database
-            var user = await _userManager.FindByIdAsync(model.UserId);
+            var user = await _userManager.FindByIdAsync(model.Role);
 
             // get user role from database
             if (user is null || ! await _roleManager.RoleExistsAsync(model.Role)) {
@@ -161,4 +163,20 @@ namespace JWTLearning.Services {
 
         #endregion
     }
+
+    #region "Project Notes"
+    /*
+        another notes: 
+            FindByEmailAsync: Gets a user by email; returns null if not found.
+            FindByNameAsync: Gets a user by username; returns null if not found.
+            CreateAsync: Creates a new user and saves it to the database.
+            GetClaimsAsync: Retrieves all claims assigned to the user.
+            CheckPasswordAsync: Verifies whether the provided password is correct.
+            GetRolesAsync: Retrieves all roles assigned to the user.
+            FindByIdAsync: Gets a user by ID; returns null if not found.
+            RoleExistsAsync: Checks whether a role exists in the system.
+            IsInRoleAsync: Checks whether the user belongs to a specific role.
+            AddToRoleAsync: Assigns a role to the user.
+     */
+    #endregion
 }

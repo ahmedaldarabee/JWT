@@ -22,9 +22,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     )
 );
 
-//mapping service
-//Service Registration and define life time [ AddScoped ]
-//linked Interface [ abstraction layer ] with implementation
+
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 //part one
@@ -55,28 +53,20 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-
-
-// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
+if (app.Environment.IsDevelopment()) {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-
 app.UseHttpsRedirection();
-
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-
 app.Run();
