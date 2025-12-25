@@ -1,7 +1,8 @@
-using JWTLearning.Helpers;
+﻿using JWTLearning.Helpers;
 using JWTLearning.Models;
 using JWTLearning.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -45,9 +46,15 @@ builder.Services.AddAuthentication(
                 //part three
                 ValidIssuer = builder.Configuration["JWT:Issuer"],
                 ValidAudience = builder.Configuration["JWT:Audience"],
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"]))
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"])),
+                RoleClaimType = "roles"
             };
         });
+
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
+
 
 
 // Swagger

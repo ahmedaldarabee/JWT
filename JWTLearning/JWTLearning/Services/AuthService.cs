@@ -12,11 +12,15 @@ namespace JWTLearning.Services {
     public class AuthService : IAuthService
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly JWT _jwt;
 
+        #region "Registration"
+
         // IOptions<JWT> jwt: to set jwt values from appsetting into JWT values
-        public AuthService(UserManager<ApplicationUser> userManager, IOptions<JWT> jwt) {
+        public AuthService(UserManager<ApplicationUser> userManager, IOptions<JWT> jwt, RoleManager<IdentityRole> roleManager) {
             _userManager = userManager;
+            _roleManager = roleManager;
             this._jwt = jwt.Value; // .value that be main jwt object as one block!
         }
 
@@ -56,7 +60,7 @@ namespace JWTLearning.Services {
             // after we register user, now we want to create Token to it!
             var jwtToken = await CreateJWTToken(user);
 
-            // return user with fully successed operations
+            // return user with fully successes operations
             return new AuthModel {
                 Email = user.Email,
                 Expireation = jwtToken.ValidTo,
@@ -74,14 +78,14 @@ namespace JWTLearning.Services {
 
         // i want from you to clarify next code:
         private async Task<JwtSecurityToken> CreateJWTToken(ApplicationUser user) {
-            
-            
+
+            //userClaims: that be as user data
             var userClaims = await _userManager.GetClaimsAsync(user);
             var roles = await _userManager.GetRolesAsync(user);
             var roleClaims = new List<Claim>();
 
             foreach (var role in roles) {
-                roleClaims.Add(new Claim("roles",role));
+                roleClaims.Add(new Claim(ClaimTypes.Role, role));
             }
         
             var claims = new[]
@@ -90,6 +94,7 @@ namespace JWTLearning.Services {
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 new Claim("uid",user.Id)
+
             }
             .Union(userClaims)
             .Union(userClaims);
@@ -106,7 +111,54 @@ namespace JWTLearning.Services {
              );
 
             return jwtSecurityToken; // return token after secure it !
-
         }
+
+        #endregion
+
+        #region "Login"
+        public async Task<AuthModel> GetTokenAsync(TokenReqestModel model) {
+            var authModel = new AuthModel();
+            var user = await _userManager.FindByEmailAsync(model.Email);
+
+            if ( user is null || !await _userManager.CheckPasswordAsync(user, model.Password)){
+                authModel.Message = "Email or Password is incorrected";
+            }
+            
+            var jwtToken = await CreateJWTToken(user);
+            var roleList = await _userManager.GetRolesAsync(user);
+
+            authModel.IsAuthenticated = true;
+            authModel.Token = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+            authModel.Email = user.Email;
+            authModel.UserName = user.UserName;
+            authModel.Expireation = jwtToken.ValidTo;
+            authModel.Roles = roleList.ToList();
+
+            return authModel;
+        }
+        #endregion
+
+        #region "User Roles"
+
+        public async Task<string> AddRoleAsync(AddRoleModel model) {
+
+            // get user data from database
+            var user = await _userManager.FindByIdAsync(model.UserId);
+
+            // get user role from database
+            if (user is null || ! await _roleManager.RoleExistsAsync(model.Role)) {
+                return "Invalid user id or role";
+            }
+            
+            if (await _userManager.IsInRoleAsync(user, model.UserId)) {
+                return "user already assigned to this role";
+            }
+
+            var result = await _userManager.AddToRoleAsync(user,model.Role);
+
+            return result.Succeeded ? string.Empty : "sorry, something went wrong!";
+        }
+
+        #endregion
     }
 }

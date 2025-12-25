@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JWTLearning.Controllers
 {
+
+    [Authorize(Roles = "Admin")]
     [ApiController]
     [Route("[controller]")]
     public class WeatherForecastController : ControllerBase
@@ -13,11 +16,10 @@ namespace JWTLearning.Controllers
 
         private readonly ILogger<WeatherForecastController> _logger;
 
-        public WeatherForecastController(ILogger<WeatherForecastController> logger)
-        {
+        public WeatherForecastController(ILogger<WeatherForecastController> logger) {
             _logger = logger;
         }
-
+        
         [HttpGet(Name = "GetWeatherForecast")]
         public IEnumerable<WeatherForecast> Get()
         {
@@ -26,8 +28,7 @@ namespace JWTLearning.Controllers
                 Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
                 TemperatureC = Random.Shared.Next(-20, 55),
                 Summary = Summaries[Random.Shared.Next(Summaries.Length)]
-            })
-            .ToArray();
+            }).ToArray();
         }
     }
 }
