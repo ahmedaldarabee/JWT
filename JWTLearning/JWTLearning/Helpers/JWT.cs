@@ -7,7 +7,7 @@
 
         public string Audience { get; set; }
 
-        public double DurationInDays { get; set; }
+        public double DurationInMinutes { get; set; }
 
     }
 }

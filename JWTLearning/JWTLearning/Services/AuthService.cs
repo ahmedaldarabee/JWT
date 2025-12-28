@@ -7,6 +7,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
+// you needed to write it manually when you want to build refresh token generation!
+using System.Security.Cryptography;
+
 namespace JWTLearning.Services {
 
     public class AuthService : IAuthService {
@@ -65,7 +68,7 @@ namespace JWTLearning.Services {
             // return user with fully successes operations
             return new AuthModel {
                 Email = user.Email,
-                Expireation = jwtToken.ValidTo,
+                //Expireation = jwtToken.ValidTo,
                 IsAuthenticated = true,
                 Roles = new List<string> { "User" }, // This section: just for this case [ For testing not in real! ]
                 Token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
@@ -90,8 +93,7 @@ namespace JWTLearning.Services {
                 roleClaims.Add(new Claim(ClaimTypes.Role, role));
             }
         
-            var claims = new[]
-            {
+            var claims = new[] {
                 new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
@@ -108,7 +110,7 @@ namespace JWTLearning.Services {
                 issuer: _jwt.Issuer,
                 audience: _jwt.Audience,
                 claims: claims,
-                expires: DateTime.Now.AddDays(_jwt.DurationInDays),
+                expires: DateTime.UtcNow.AddMinutes(_jwt.DurationInMinutes),
                 signingCredentials: singingCredentials
              );
 
@@ -133,8 +135,27 @@ namespace JWTLearning.Services {
             authModel.Token = new JwtSecurityTokenHandler().WriteToken(jwtToken);
             authModel.Email = user.Email;
             authModel.UserName = user.UserName;
-            authModel.Expireation = jwtToken.ValidTo;
+            //authModel.Expireation = jwtToken.ValidTo;
             authModel.Roles = roleList.ToList();
+
+            // if user have refresh token and be as active, so we needed to assign this refresh token into 
+            // - our Auth Model , else we want to generate new refresh token and assign into our auth model!
+            
+            if (user.RefreshTokens.Any(token => token.isActive)){
+                var activeRefreshToken = user.RefreshTokens.FirstOrDefault(token => token.isActive);
+                authModel.RefreshToken = activeRefreshToken.Token;
+                authModel.RefreshTokenExpireation = activeRefreshToken.ExpiresOn;
+            }
+            else{
+                var newRefreshToken = GenerateRefreshToken();
+                authModel.RefreshToken = newRefreshToken.Token;
+                authModel.RefreshTokenExpireation = newRefreshToken.ExpiresOn;
+
+                // now after we assigning new refresh token value,
+                // we want to update our database
+                user.RefreshTokens.Add(newRefreshToken);
+                await _userManager.UpdateAsync(user);
+            }
 
             return authModel;
         }
@@ -145,14 +166,14 @@ namespace JWTLearning.Services {
         public async Task<string> AddRoleAsync(AddRoleModel model) {
 
             // get user data from database
-            var user = await _userManager.FindByIdAsync(model.Role);
+            var user = await _userManager.FindByIdAsync(model.UserId);
 
             // get user role from database
             if (user is null || ! await _roleManager.RoleExistsAsync(model.Role)) {
                 return "Invalid user id or role";
             }
-            
-            if (await _userManager.IsInRoleAsync(user, model.UserId)) {
+            //IsInRoleAsync: to check if this user that have this role
+            if (await _userManager.IsInRoleAsync(user, model.Role)) {
                 return "user already assigned to this role";
             }
 
@@ -161,6 +182,21 @@ namespace JWTLearning.Services {
             return result.Succeeded ? string.Empty : "sorry, something went wrong!";
         }
 
+        #endregion
+
+        #region "Generate Refresh Token"
+        // once you want to select class as a return type, the return type be as class fields        
+        private RefreshToken GenerateRefreshToken(){
+            var randomNumber = new byte[32];
+            using var generator = new RNGCryptoServiceProvider();
+            generator.GetBytes(randomNumber);
+
+            return new RefreshToken {
+                Token = Convert.ToBase64String(randomNumber),
+                ExpiresOn = DateTime.UtcNow.AddDays(10),
+                CreateOn = DateTime.UtcNow
+            };
+        }
         #endregion
     }
 

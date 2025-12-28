@@ -35,7 +35,8 @@ builder.Services.AddAuthentication(
         option => {
             option.RequireHttpsMetadata = false;
             option.SaveToken = false;
-            option.TokenValidationParameters = new TokenValidationParameters {
+            option.TokenValidationParameters = new TokenValidationParameters
+            {
                 ValidateIssuerSigningKey = true,
                 ValidateIssuer = true,
                 ValidateAudience = true,
@@ -44,14 +45,22 @@ builder.Services.AddAuthentication(
                 //part three
                 ValidIssuer = builder.Configuration["JWT:Issuer"],
                 ValidAudience = builder.Configuration["JWT:Audience"],
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"])),
-                RoleClaimType = "roles"
+                IssuerSigningKey =
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"])),
+                RoleClaimType = "roles",
+
+                // that check once token expired, off/stop this token!
+                ClockSkew = TimeSpan.Zero
+
             };
         });
 
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+
+builder.Services.AddIdentityCore<ApplicationUser>()
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
+
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
